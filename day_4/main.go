@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
+	"math"
 	"regexp"
 	"strconv"
 	"strings"
@@ -15,16 +16,14 @@ func main() {
 		panic("NOPE")
 	}
 
-	// input := "totally-real-room-200[decoy]"
 	roomNames := strings.Split(string(input), "\n")
 
-	re := regexp.MustCompile("([a-z][a-z][a-z][a-z][a-z])]$")
+	reChecksum := regexp.MustCompile("([a-z][a-z][a-z][a-z][a-z])]$")
 	reSectorID := regexp.MustCompile("-([0-9]+)")
-	sumIDs := 0
 
 	for i := 0; i < len(roomNames); i++ {
 		roomName := roomNames[i]
-		checksum := re.FindStringSubmatch(roomName)[1]
+		checksum := reChecksum.FindStringSubmatch(roomName)[1]
 		sectorID, _ := strconv.Atoi(reSectorID.FindStringSubmatch(roomName)[1])
 
 		letters := roomName[0:reSectorID.FindStringIndex(roomName)[0]]
@@ -40,18 +39,34 @@ func main() {
 		}
 
 		if validationThingy.Valid() {
-			sumIDs = sumIDs + sectorID
-		}
+			var fullCycles float64
+			fullCycles = float64(sectorID) / float64(26)
+			remainder := sectorID - (int(math.Trunc(fullCycles)) * 26)
 
-		// fmt.Println("******************************")
-		// fmt.Println(roomName)
-		// fmt.Println(checksum)
-		// fmt.Println(sectorID)
-		// fmt.Println(letters)
-		// fmt.Println(validationThingy.Valid())
-		// fmt.Println("******************************")
+			decodedName := ""
+
+			for n := 0; n < len(letters); n++ {
+				letter := string(letters[n])
+				if letter == "-" {
+					decodedName = decodedName + " "
+					continue
+				}
+
+				newRune := []rune(letter)[0] + rune(remainder)
+				// z = 122
+				if newRune > 122 {
+					newRune = newRune - 26
+				}
+				decodedName = decodedName + string(newRune)
+			}
+
+			if strings.Contains(decodedName, "north") {
+				fmt.Println(decodedName)
+				fmt.Println("found in sector: ", sectorID)
+				break
+			}
+		}
 	}
-	fmt.Println(sumIDs)
 }
 
 type thingyType struct {
